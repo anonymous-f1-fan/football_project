@@ -7,3 +7,6 @@ pyvis
 stvis
 selenium
 webdriver_manager
+plotly.express
+sklearn
+aqlite3
