@@ -8,33 +8,14 @@ import matplotlib.pyplot as plt
 import altair as alt
 from sklearn.linear_model import LinearRegression
 
-database = 'database.sqlite'
+@st.cache(allow_output_mutation=True)
+def get_data(data):
+    return pd.read_csv(data, delimiter=',')
 
-'https://www.dropbox.com/s/4mchht9srit9cwt/database.sqlite?dl=0'
 
-conn = sqlite3.connect(database)
+top_5_results = get_data('top_results.csv')
 
-@st.cache
-def get_top5_results():
-    return pd.read_sql(f"""SELECT name, season, SUM(home_team_goal) AS total_home_goals, SUM(away_team_goal) AS total_away_goals, 
-                        AVG(home_team_goal+away_team_goal) AS average_goals
-                        FROM Match
-                        LEFT JOIN League
-                        ON Match.league_id = League.id
-                        WHERE name in ("England Premier League", "France Ligue 1", "Germany 1. Bundesliga", "Italy Serie A", "Spain LIGA BBVA")
-                        GROUP BY name, season;""", conn)
-
-top_5_results = get_top5_results()
-
-@st.cache
-def get_top_5_matches():
-    return pd.read_sql(f"""SELECT Match.id AS id, name, season, home_team_goal, away_team_goal, (home_team_goal-away_team_goal) AS difference, (home_team_goal+away_team_goal) AS total 
-                        FROM Match
-                        LEFT JOIN League
-                        ON Match.league_id = League.id
-                        WHERE name in ("England Premier League", "France Ligue 1", "Germany 1. Bundesliga", "Italy Serie A", "Spain LIGA BBVA");""", conn)
-
-top_5_matches = get_top_5_matches()
+top_5_matches = get_data('top_matches.csv')
 
 top_5_matches
 
@@ -86,5 +67,3 @@ top_5_matches.plot.scatter(x="total", y="difference", ax=ax)
 x = pd.DataFrame(dict(total=np.linspace(0, 12)))
 plt.plot(x["total"], model.predict(x), color="C1", lw=2)
 st.pyplot(fig)
-
-conn.close()

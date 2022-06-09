@@ -9,23 +9,16 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 
-
 @st.cache(allow_output_mutation=True)
-def get_scores():
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    driver.get("https://www.championat.com/football/_russiapl/tournament/4465/calendar/")
+def get_data(data):
+    return pd.read_csv(data, delimiter=',')
 
-    new_list = []
-    for i in range(240):
-        new_list.append(driver.find_elements(By.CSS_SELECTOR, "tr")[i+1].
-                        find_elements(By.TAG_NAME, "td")[-2].find_element(By.TAG_NAME, "span").
-                        get_attribute("innerHTML").strip())
-    return pd.DataFrame(new_list)
-df1 = get_scores()
-df1['home'] = df1[0].str[0]
-df1['away'] = df1[0].str[-1]
+df1 = get_data('RPL_games.csv')
+df1['home'] = df1['games'].str[0]
+df1['away'] = df1['games'].str[-1]
 
-df_results = pd.pivot_table(data=df1, values=0, index='home', columns='away', aggfunc='count').fillna(0)
+df_results = pd.pivot_table(data=df1, values='games', index='home', columns='away', aggfunc='count').fillna(0)
+
 
 fig, ax = plt.subplots()
 chart = sns.heatmap(data=df_results,
@@ -34,24 +27,7 @@ chart.set_title(f"rgggg")
 chart.set(xlabel='Home', ylabel='Guest')
 st.pyplot(fig)
 
-@st.cache
-def get_players():
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    driver.get("https://www.championat.com/football/_russiapl/tournament/4465/statistic/player/bombardir/")
-
-    new_list = []
-    for i in range(196):
-        list_of_td = driver.find_elements(By.CSS_SELECTOR, "tr")[i+1].find_elements(By.CSS_SELECTOR, "td")
-        d = dict()
-        d[1] = re.findall('"[\w]*"', list_of_td[2].find_elements(By.CSS_SELECTOR, "span")[0].get_attribute("innerHTML").strip())[-1][1:-1]
-        d[2] = list_of_td[2].find_elements(By.CSS_SELECTOR, "span")[1].get_attribute("innerHTML").strip()
-        for j in range(3, 10):
-            d[j] = list_of_td[j].get_attribute("innerHTML").strip()
-        new_list.append(d)
-    return pd.DataFrame(new_list)
-df2 = get_players()
-
-df2 = df2.rename(columns={1: "Национальность", 2: "Игрок", 3: "Клуб", 4: "Амплуа", 5: "Голы", 6: "Пенальти", 7: "Мин./Гол", 8: "Минуты", 9: "Игры"})
+df2 = get_data("RPL_players.csv")
 
 df3 = df2.loc[0:9].set_index('Игрок')
 df3['С игры'] = df3['Голы'].astype(int) - df3['Пенальти'].astype(int)
