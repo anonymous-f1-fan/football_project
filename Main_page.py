@@ -13,13 +13,14 @@ with st.echo(code_location='below'):
     st.sidebar.markdown("# Main page")
 
     @st.cache
-    def get_api(url):
-        return requests.get(url, headers={'X-Auth-Token': 'bc43b7291e5f4468ab7e843cfd0178a4'}, params={'format': 'json'}).json()
+    def get_api(url, params={'format': 'json'}):
+        return requests.get(url, headers={'X-Auth-Token': 'bc43b7291e5f4468ab7e843cfd0178a4'}, params=params).json()
 
     areas = pd.DataFrame(get_api('http://api.football-data.org/v4/areas/')['areas'])
     competitions = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/')['competitions'])
-    PL_2021_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/2021/matches?dateFrom=2021-08-01&dateTo=2022-05-30')['matches'])
-    CL_2021_teams = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/CL/teams?season=2021')['teams'])
+    PL_2021_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/2021/matches',
+                                           params={'format': 'json', 'dateFrom': '2021-08-01', 'dateTo': '2022-05-30'})['matches'])
+    CL_2021_teams = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/CL/teams', params={'format': 'json', 'season': '2021'})['teams'])
 
     @st.cache
     def get_address(address):
@@ -60,16 +61,67 @@ with st.echo(code_location='below'):
     CL_2021_teams.loc[76, 'lat'], CL_2021_teams.loc[76, 'lon'] = 46.666667, 16.166667
     CL_2021_teams.loc[79, 'lat'], CL_2021_teams.loc[79, 'lon'] = 35.1725, 33.365
 
+    a = st.selectbox('Choose:', CL_2021_teams['name'].unique())
+    a_id = CL_2021_teams[lambda x: x['name'] == a].index[0]
+
     m = folium.Map([55, 20], zoom_start=3.2, tiles='openstreetmap')
+
     for id in CL_2021_teams.index:
         folium.Circle([CL_2021_teams.loc[id, 'lat'], CL_2021_teams.loc[id, 'lon']],
                       radius=10, color='red', fill_color='Red').add_to(m)
         folium.Marker([CL_2021_teams.loc[id, 'lat'], CL_2021_teams.loc[id, 'lon']],
                       popup=f"{CL_2021_teams.loc[id, 'name']} \n ({CL_2021_teams.loc[id, 'venue']})",
                       icon=folium.Icon(color="red", icon="info-sign")).add_to(m)
+
+    folium.Circle([CL_2021_teams.loc[a_id, 'lat'], CL_2021_teams.loc[a_id, 'lon']],
+                  radius=10, color='black', fill_color='Black').add_to(m)
+    folium.Marker([CL_2021_teams.loc[a_id, 'lat'], CL_2021_teams.loc[a_id, 'lon']],
+                  popup=f"{CL_2021_teams.loc[a_id, 'name']} \n ({CL_2021_teams.loc[a_id, 'venue']})",
+                  icon=folium.Icon(color="black", icon="info-sign")).add_to(m)
+
     m
 
-    EC_2018_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/EC/matches?season=2021')['matches'])
+    a_id2 = CL_2021_teams[lambda x: x['name'] == a]['id'].loc[a_id]
+
+    a_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/teams/'+str(a_id2)+'/matches/', params={'format': 'json', 'competitions': 'CL', 'season': '2021'})['matches'])
+    a_matches1 = pd.DataFrame()
+    a_matches1['HomeTeam'] = a_matches['homeTeam'].apply(lambda x: x['name'])
+    a_matches1['AwayTeam'] = a_matches['awayTeam'].apply(lambda x: x['name'])
+    a_matches1['HomeGoals'] = a_matches['score'].apply(lambda x: x['fullTime']['home'])
+    a_matches1['AwayGoals'] = a_matches['score'].apply(lambda x: x['fullTime']['away'])
+    a_matches1
+
+    teams = list(set(a_matches1['HomeTeam'].unique()) | set(a_matches1['AwayTeam'].unique()))
+    net = Network(directed=True, notebook=True, height='700px', width='700px', bgcolor='grey', font_color='white')
+    net.add_nodes(teams)
+
+    for id in a_matches1.index:
+        if a_matches1.loc[id, 'HomeTeam'] == a:
+            if a_matches1.loc[id, 'HomeGoals'] > a_matches1.loc[id, 'AwayGoals']:
+                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='green')
+            elif a_matches1.loc[id, 'HomeGoals'] < a_matches1.loc[id, 'AwayGoals']:
+                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='red')
+            else:
+                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='yellow')
+        if a_matches1.loc[id, 'AwayTeam'] == a:
+            if a_matches1.loc[id, 'HomeGoals'] > a_matches1.loc[id, 'AwayGoals']:
+                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='red')
+            elif a_matches1.loc[id, 'HomeGoals'] < a_matches1.loc[id, 'AwayGoals']:
+                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='green')
+            else:
+                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='yellow')
+
+    net.repulsion(node_distance=100, central_gravity=0.33, spring_length=210, spring_strength=0.1, damping=1)
+
+    pv_static(net)
+
+
+
+
+
+
+
+    EC_2018_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/EC/matches', params={'format': 'json', 'season': '2021'})['matches'])
 
 
     EC_2018_matches['Home'] = EC_2018_matches['homeTeam'].apply(lambda x: x['name'])
@@ -86,12 +138,5 @@ with st.echo(code_location='below'):
 
     pv_static(net)
 
-
-
-
-    #areas
-    #competitions
-    #PL_2021_matches
-    #CL_2021_teams
 
 
