@@ -95,5 +95,3 @@ with st.echo(code_location='below'):
     #CL_2021_teams
 
 
-
-    """ifjrhightigh"""
