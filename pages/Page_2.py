@@ -1,8 +1,6 @@
 import streamlit as st
-
 import numpy as np
 import pandas as pd
-import sqlite3
 import seaborn as sns
 import matplotlib.pyplot as plt
 import altair as alt
@@ -12,14 +10,27 @@ from sklearn.linear_model import LinearRegression
 def get_data(data):
     return pd.read_csv(data, delimiter=',')
 
+### Код, при помощи которого создаётся csv-файл
+#pd.read_sql("""SELECT name, season, SUM(home_team_goal) AS total_home_goals, SUM(away_team_goal) AS total_away_goals,
+#                        AVG(home_team_goal+away_team_goal) AS average_goals
+#                        FROM Match
+#                        LEFT JOIN League
+#                        ON Match.league_id = League.id
+#                        WHERE name in ("England Premier League", "France Ligue 1", "Germany 1. Bundesliga", "Italy Serie A", "Spain LIGA BBVA")
+#                        GROUP BY name, season;""", conn).to_csv("top_results.csv", index=False)
 
 top_5_results = get_data('top_results.csv')
 
+### Код, при помощи которого создаётся csv-файл
+#pd.read_sql(f"""SELECT Match.id AS id, name, season, home_team_goal, away_team_goal, (home_team_goal-away_team_goal) AS difference,
+#(home_team_goal+away_team_goal) AS total
+#                        FROM Match
+#                        LEFT JOIN League
+#                        ON Match.league_id = League.id
+#                        WHERE name in ("England Premier League", "France Ligue 1",
+#                        "Germany 1. Bundesliga", "Italy Serie A", "Spain LIGA BBVA");""", conn).to_csv("top_matches.csv", index=False)
+
 top_5_matches = get_data('top_matches.csv')
-
-top_5_matches
-
-top_5_results
 
 a = st.selectbox('Choose:', top_5_results['name'].unique())
 
@@ -50,8 +61,10 @@ alt_chart =  (alt.Chart(top_5_results).mark_line(point=True).encode(
 
 st.altair_chart(alt_chart)
 
+### FROM (частично): Лекция за 24.05.
 def add_jitter(x, jitter=0.4):
     return x+ np.random.uniform(low=-jitter, high=jitter, size=x.shape)
+### END FROM
 
 fig, ax = plt.subplots()
 chart = sns.jointplot(data=top_5_matches.sort_values(['total', 'difference', 'season', 'name']).assign(home_team_goal=lambda x: add_jitter(x['home_team_goal']),
