@@ -6,6 +6,8 @@ import folium
 import networkx as nx
 from pyvis.network import Network
 from stvis import pv_static
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 with st.echo(code_location='below'):
 
@@ -92,7 +94,7 @@ with st.echo(code_location='below'):
     a_matches1
 
     teams = list(set(a_matches1['HomeTeam'].unique()) | set(a_matches1['AwayTeam'].unique()))
-    net = Network(directed=True, notebook=True, height='700px', width='700px', bgcolor='grey', font_color='white')
+    net = Network(directed=True, notebook=True, height='700px', width='700px', bgcolor='#222222', font_color='white')
     net.add_nodes(teams)
 
     for id in a_matches1.index:
@@ -120,16 +122,15 @@ with st.echo(code_location='below'):
 
 
 
+    EC_2021_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/EC/matches', params={'format': 'json', 'season': '2021'})['matches'])
 
-    EC_2018_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/EC/matches', params={'format': 'json', 'season': '2021'})['matches'])
 
+    EC_2021_matches['Home'] = EC_2021_matches['homeTeam'].apply(lambda x: x['name'])
+    EC_2021_matches['Away'] = EC_2021_matches['awayTeam'].apply(lambda x: x['name'])
 
-    EC_2018_matches['Home'] = EC_2018_matches['homeTeam'].apply(lambda x: x['name'])
-    EC_2018_matches['Away'] = EC_2018_matches['awayTeam'].apply(lambda x: x['name'])
+    EC_2021_matches_part = EC_2021_matches[['Home', 'Away']]
 
-    EC_2018_matches_part = EC_2018_matches[['Home', 'Away']]
-
-    games_graph = nx.DiGraph([(home, away) for (home, away) in EC_2018_matches_part.values])
+    games_graph = nx.DiGraph([(EC_2021_matches_part.loc[id, 'Home'], EC_2021_matches_part.loc[id, 'Away']) for id in EC_2021_matches_part.index])
 
     net = Network(directed=False, notebook=True, height='700px', width='700px', bgcolor='#222222', font_color='white')
     net.from_nx(games_graph)
@@ -138,5 +139,15 @@ with st.echo(code_location='below'):
 
     pv_static(net)
 
+    EC_2021_scorers = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/EC/scorers',
+                                           params={'format': 'json', 'season': '2021', 'limit': '15'})['scorers'])
+
+    EC_2021_scorers['name'] = EC_2021_scorers['player'].apply(lambda x: x['name'])
+
+    fig, ax = plt.subplots()
+    chart = sns.barplot(x='goals', y="name", data=EC_2021_scorers, palette="Blues_d")
+    chart.set_title(f"rgggg")
+    chart.set(xlabel='Количество голов', ylabel='Игрок')
+    st.pyplot(fig)
 
 
