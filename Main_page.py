@@ -1,153 +1,75 @@
 import streamlit as st
-import requests
-import pandas as pd
-import re
-import folium
-import networkx as nx
-from pyvis.network import Network
-from stvis import pv_static
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-with st.echo(code_location='below'):
+st.header("Проект: Анализ данных, связанных с футболом")
 
-    st.markdown("# Main page")
-    st.sidebar.markdown("# Main page")
+st.subheader("Описание проекта")
 
-    @st.cache
-    def get_api(url, params={'format': 'json'}):
-        return requests.get(url, headers={'X-Auth-Token': 'bc43b7291e5f4468ab7e843cfd0178a4'}, params=params).json()
+"""Этот проект посвящён анализу и визуализации различных данных, связанных с мировым и российким футболом. Для удобства он
+разделён на несколько частей, каждой из которых соответствует отдельная страничка, которую можно выбрать в верхнем левом углу."""
 
-    areas = pd.DataFrame(get_api('http://api.football-data.org/v4/areas/')['areas'])
-    competitions = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/')['competitions'])
-    PL_2021_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/2021/matches',
-                                           params={'format': 'json', 'dateFrom': '2021-08-01', 'dateTo': '2022-05-30'})['matches'])
-    CL_2021_teams = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/CL/teams', params={'format': 'json', 'season': '2021'})['teams'])
+"""Первая часть проекта посвящена анализу топ-5 мировых чемпионатов: английская, испанская, итальянская, немецкая и французская лиги.
+В этом разделе можно посмотреть информацию про каждый из чемпионатов по отдельности, сравнить их друг с другом и узнать про какие-то общие тенденции, 
+характерные всем чемпионатам."""
 
-    @st.cache
-    def get_address(address):
-        entrypoint = "https://nominatim.openstreetmap.org/search"
-        params = {'q': address, 'format': 'json'}
-        return requests.get(entrypoint, params=params).json()
+"""Во второй части проекта я предлагаю взглянуть внимательнее на Российскую Премьер-Лигу. Я предлагаю расммотреть эту лигу 
+отдельно, не сравнивая с топовыми чемпионатами, чтобы в лишний раз не разочаровываться в российском футболе."""
 
-    CL_2021_teams.loc[:, 'lat'] = 0.0
-    CL_2021_teams.loc[:, 'lon'] = 0.0
+"""В третьей части рассматриваются европейские чемпионаты: Лига Чемпионов (турнир между лучшими европейскими клубами) и 
+Чемпионат Европы (турнир между европейскими сборными). """
 
-    for id in CL_2021_teams.index:
-        new_address = re.findall("[\w\.\-\s]*\s", CL_2021_teams.loc[id, 'address'])[0]
-        if get_address(CL_2021_teams.loc[id, 'venue']) != []:
-            CL_2021_teams.loc[id, 'lat'] = float(get_address(CL_2021_teams.loc[id, 'venue'])[0]['lat'])
-            CL_2021_teams.loc[id, 'lon'] = float(get_address(CL_2021_teams.loc[id, 'venue'])[0]['lon'])
-        elif get_address(CL_2021_teams.loc[id, 'address']) != []:
-            CL_2021_teams.loc[id, 'lat'] = float(get_address(CL_2021_teams.loc[id, 'address'])[0]['lat'])
-            CL_2021_teams.loc[id, 'lon'] = float(get_address(CL_2021_teams.loc[id, 'address'])[0]['lon'])
-        elif get_address(new_address) != []:
-            CL_2021_teams.loc[id, 'lat'] = float(get_address(new_address)[0]['lat'])
-            CL_2021_teams.loc[id, 'lon'] = float(get_address(new_address)[0]['lon'])
-        else:
-            pass
+"""Заключительная часть посвящена анализу игроков и их рейтингов в игре FIFA 2020. Кроме того, для этой части был создан 
+телеграм-бот, которым предлагается воспользоваться в конце этого раздела"""
 
-    CL_2021_teams.loc[21, 'lat'], CL_2021_teams.loc[21, 'lon'] = 41.039206, 28.994742
-    CL_2021_teams.loc[32, 'lat'], CL_2021_teams.loc[32, 'lon'] = 50.451531, 30.533692
-    CL_2021_teams.loc[35, 'lat'], CL_2021_teams.loc[35, 'lon'] = 50.099803, 14.415911
-    CL_2021_teams.loc[39, 'lat'], CL_2021_teams.loc[39, 'lon'] = 40.154605, 44.475231
-    CL_2021_teams.loc[42, 'lat'], CL_2021_teams.loc[42, 'lon'] = 46.838346, 29.557169
-    CL_2021_teams.loc[44, 'lat'], CL_2021_teams.loc[44, 'lon'] = 49.980858, 36.261703
-    CL_2021_teams.loc[46, 'lat'], CL_2021_teams.loc[46, 'lon'] = 35.894864, 14.415372
-    CL_2021_teams.loc[47, 'lat'], CL_2021_teams.loc[47, 'lon'] = 54.582625, -5.955189
-    CL_2021_teams.loc[50, 'lat'], CL_2021_teams.loc[50, 'lon'] = 48.198036, 16.266021
-    CL_2021_teams.loc[57, 'lat'], CL_2021_teams.loc[57, 'lon'] = 53.225338, -3.076505
-    CL_2021_teams.loc[66, 'lat'], CL_2021_teams.loc[66, 'lon'] = 42.0186, 20.9783
-    CL_2021_teams.loc[68, 'lat'], CL_2021_teams.loc[68, 'lon'] = 43.9746459, 12.5072119
-    CL_2021_teams.loc[73, 'lat'], CL_2021_teams.loc[73, 'lon'] = 43.238331, 76.92435
-    CL_2021_teams.loc[76, 'lat'], CL_2021_teams.loc[76, 'lon'] = 46.666667, 16.166667
-    CL_2021_teams.loc[79, 'lat'], CL_2021_teams.loc[79, 'lon'] = 35.1725, 33.365
+st.subheader("Соответствие критериям")
 
-    a = st.selectbox('Choose:', CL_2021_teams['name'].unique())
-    a_id = CL_2021_teams[lambda x: x['name'] == a].index[0]
+"""При создании этого проекта использовалось множество различных технологий, поэтому для удобства проверяющих я опишу, 
+какие технолгии использовались и для чего."""
 
-    m = folium.Map([55, 20], zoom_start=3.2, tiles='openstreetmap')
+st.markdown("**1. Обработка данных с помощью pandas.** Эту библиотеку я использовал повсеместно: создавал датафреймы, "
+            "объединял, форматировал. Для этого использовались функции ```pivot_table```, ```groupby```, ```concat```, "
+            "```astype```, ```merge```, ```apply``` и другие.")
 
-    for id in CL_2021_teams.index:
-        folium.Circle([CL_2021_teams.loc[id, 'lat'], CL_2021_teams.loc[id, 'lon']],
-                      radius=10, color='red', fill_color='Red').add_to(m)
-        folium.Marker([CL_2021_teams.loc[id, 'lat'], CL_2021_teams.loc[id, 'lon']],
-                      popup=f"{CL_2021_teams.loc[id, 'name']} \n ({CL_2021_teams.loc[id, 'venue']})",
-                      icon=folium.Icon(color="red", icon="info-sign")).add_to(m)
+st.markdown("**2. Веб-скреппинг.** Веб-скрэппинг использовался во второй части проекта, в которой я при помощи ```selenium``` "
+            "получал информацию с сайта championat.com. Используемый код есть как в прикреплённом файле, так и в самом проекте.")
 
-    folium.Circle([CL_2021_teams.loc[a_id, 'lat'], CL_2021_teams.loc[a_id, 'lon']],
-                  radius=10, color='black', fill_color='Black').add_to(m)
-    folium.Marker([CL_2021_teams.loc[a_id, 'lat'], CL_2021_teams.loc[a_id, 'lon']],
-                  popup=f"{CL_2021_teams.loc[a_id, 'name']} \n ({CL_2021_teams.loc[a_id, 'venue']})",
-                  icon=folium.Icon(color="black", icon="info-sign")).add_to(m)
+st.markdown("**3. Работа с REST API (XML/JSON).** Я работал с двумя разными API преимущественно в третьей части проекта. "
+            "Я получал информацию. с api.football-data.org при помощи множества различных запросов. А затем получал адреса "
+            "стадионов, используя nominatim.openstreetmap.org.")
 
-    m
+st.markdown('**4. Визуализация данных.** Визуализации есть во всех частях проекта. Кроме обычного ```matplotlib```, '
+            'также использовались библиотеки ```seaborn```, ```altair``` и ```plotly```. Понятие сложности, конечно, субъективное, '
+            'но от себя могу сказать, что, например, на построение "паутинок" в четвёртой части ушло довольно много времени и строчек кода.')
 
-    a_id2 = CL_2021_teams[lambda x: x['name'] == a]['id'].loc[a_id]
+st.markdown('**5. Математические возможности Python.** Я использовал ```numpy``` в трёх местах этого проекта: '
+            'для создания шума в визуализации в первой части, при визуализации регрессий и при работе с данными из FIFA. '
+            'При этом использовались ```np.linspace```, ```np.random.uniform``` и ```np.sum```')
 
-    a_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/teams/'+str(a_id2)+'/matches/', params={'format': 'json', 'competitions': 'CL', 'season': '2021'})['matches'])
-    a_matches1 = pd.DataFrame()
-    a_matches1['HomeTeam'] = a_matches['homeTeam'].apply(lambda x: x['name'])
-    a_matches1['AwayTeam'] = a_matches['awayTeam'].apply(lambda x: x['name'])
-    a_matches1['HomeGoals'] = a_matches['score'].apply(lambda x: x['fullTime']['home'])
-    a_matches1['AwayGoals'] = a_matches['score'].apply(lambda x: x['fullTime']['away'])
-    a_matches1
+st.markdown('**6. Streamlit.** Кажется, получилось использовать.')
 
-    teams = list(set(a_matches1['HomeTeam'].unique()) | set(a_matches1['AwayTeam'].unique()))
-    net = Network(directed=True, notebook=True, height='700px', width='700px', bgcolor='#222222', font_color='white')
-    net.add_nodes(teams)
+st.markdown('**7. SQL.** Использовал в первой части проекта. Так как используемая мной база данных была очень большой, то '
+            'я сделал при помощи SQL несколько csv-файлов, с которыми дальше работал. Код можно найти в отдельном файле и в самом проекте.')
 
-    for id in a_matches1.index:
-        if a_matches1.loc[id, 'HomeTeam'] == a:
-            if a_matches1.loc[id, 'HomeGoals'] > a_matches1.loc[id, 'AwayGoals']:
-                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='green')
-            elif a_matches1.loc[id, 'HomeGoals'] < a_matches1.loc[id, 'AwayGoals']:
-                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='red')
-            else:
-                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='yellow')
-        if a_matches1.loc[id, 'AwayTeam'] == a:
-            if a_matches1.loc[id, 'HomeGoals'] > a_matches1.loc[id, 'AwayGoals']:
-                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='red')
-            elif a_matches1.loc[id, 'HomeGoals'] < a_matches1.loc[id, 'AwayGoals']:
-                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='green')
-            else:
-                net.add_edge(a_matches1.loc[id, 'HomeTeam'], a_matches1.loc[id, 'AwayTeam'], color='yellow')
+st.markdown('**8. Регулярные выражения.** Использовал дважды: когда скаичвал информацию о национальностях футболистов с сайта championat.com и когда '
+            'приводил адреса стадионов к стандартному виду (во многих адресах был указан почтовый индекс, из-за которого адрес стадиона не находился). '
+            'Если бы регулярные выражения не были использованы в этих местах, то это сильно усложнило бы мне жизнь и пришлось бы писать много дополнительных строчек кода.')
 
-    net.repulsion(node_distance=100, central_gravity=0.33, spring_length=210, spring_strength=0.1, damping=1)
+st.markdown('**9. Работа с геоданными с помощью geopandas, shapely, folium и т.д.** Использовал ```shapely``` и ```folium```, когда изображал стадионы в третьей части.')
 
-    pv_static(net)
+st.markdown('**10. Машинное обучение.** Использовал много различных регрессий в первой и последней частях проекта.')
+
+st.markdown('**11. Работа с графами.** Изображал графы в третьей части проекта.')
+
+st.markdown('**12. Дополнительные технологии.** Скоро будет.')
+
+st.markdown('**13. Объём.** По-моему, тут около 500 строк. Точно больше 120.')
+
+st.markdown('**14. Целостность проекта.** В проекте 4 части, но все они объединены темой "футбол".')
+
+st.markdown('**15. Общее впечатление.** Надеюсь, мой проект понравится :)')
 
 
 
 
 
-
-    EC_2021_matches = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/EC/matches', params={'format': 'json', 'season': '2021'})['matches'])
-
-
-    EC_2021_matches['Home'] = EC_2021_matches['homeTeam'].apply(lambda x: x['name'])
-    EC_2021_matches['Away'] = EC_2021_matches['awayTeam'].apply(lambda x: x['name'])
-
-    EC_2021_matches_part = EC_2021_matches[['Home', 'Away']]
-
-    games_graph = nx.DiGraph([(EC_2021_matches_part.loc[id, 'Home'], EC_2021_matches_part.loc[id, 'Away']) for id in EC_2021_matches_part.index])
-
-    net = Network(directed=False, notebook=True, height='700px', width='700px', bgcolor='#222222', font_color='white')
-    net.from_nx(games_graph)
-
-    net.repulsion(node_distance=100, central_gravity=0.33, spring_length=210, spring_strength=0.1, damping=1)
-
-    pv_static(net)
-
-    EC_2021_scorers = pd.DataFrame(get_api('http://api.football-data.org/v4/competitions/EC/scorers',
-                                           params={'format': 'json', 'season': '2021', 'limit': '15'})['scorers'])
-
-    EC_2021_scorers['name'] = EC_2021_scorers['player'].apply(lambda x: x['name'])
-
-    fig, ax = plt.subplots()
-    chart = sns.barplot(x='goals', y="name", data=EC_2021_scorers, palette="Blues_d")
-    chart.set_title(f"rgggg")
-    chart.set(xlabel='Количество голов', ylabel='Игрок')
-    st.pyplot(fig)
 
 
