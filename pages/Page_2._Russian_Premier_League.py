@@ -68,7 +68,7 @@ with st.echo(code_location='below'):
     #df.to_csv("RPL_players.csv", index=False)
 
 
-    df2 = get_data("RPL_players.csv")
+    df2 = get_data("RPL_players_new.csv")
 
     df3 = df2.loc[0:9].set_index('Игрок')
     df3['С игры'] = df3['Голы'].astype(int) - df3['Пенальти'].astype(int)
