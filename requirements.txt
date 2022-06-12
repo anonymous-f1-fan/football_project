@@ -7,3 +7,4 @@ pyvis
 stvis
 plotly.express
 sklearn
+pytelegrambotapi
