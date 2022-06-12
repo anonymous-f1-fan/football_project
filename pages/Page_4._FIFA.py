@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
-
+import telebot
 
 with st.echo(code_location='below'):
     st.header("Анализ игроков из FIFA 20")
@@ -229,6 +229,21 @@ with st.echo(code_location='below'):
 
     """Однако даже из этих картинок не до конца понятно, каким будет рейтинг при заданных параметрах. Но для того, чтобы 
     разобраться с этим я (напишу) телеграм-бота, который будет предказывать рейтинг футболиста с заданными параметрами."""
+
+    bot = telebot.TeleBot('5411340952:AAHEJN5xZiLy6IlfNqHYGdxkl2b2O9glGdU')
+
+
+    @bot.message_handler(content_types=['text'])
+    def get_text_messages(message):
+        if message.text == "Привет":
+            bot.send_message(message.from_user.id, "Привет, чем я могу тебе помочь?")
+        elif message.text == "/help":
+            bot.send_message(message.from_user.id, "Напиши привет")
+        else:
+            bot.send_message(message.from_user.id, "Я тебя не понимаю. Напиши /help.")
+
+
+    bot.polling(none_stop=True, interval=0)
 
 
 
